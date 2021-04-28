@@ -197,7 +197,7 @@ def griffinLimInverse(S, W, H, NIters = 10, winfunc = None):
         winfunc = halfsine
     A = np.array(S, dtype = np.complex)
     for i in range(NIters):
-        print("Iteration %i of %i"%(i+1, NIters))
+        #print("Iteration %i of %i"%(i+1, NIters))
         A = STFT(iSTFT(A, W, H, winfunc), W, H, winfunc)
         Norm = np.sqrt(A*np.conj(A))
         Norm[Norm < eps] = 1

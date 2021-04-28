@@ -57,9 +57,14 @@ def plotNMFSpectra(V, W, H, iter, errs, hopLength = -1):
     plt.imshow(np.log(H + np.min(H[H > 0])), cmap = 'afmhot', interpolation = 'none', aspect = 'auto')
     plt.title("H Iteration %i"%iter)
     plt.subplot(155)
-    plt.semilogy(np.array(errs[1::]))
-    plt.title("KL Errors")
-    plt.xlabel("Iteration")             
+    plt.semilogy(errs[1::])
+    plt.scatter([iter-1], errs[iter])
+    plt.xlim([-int(errs.size*0.05), errs.size+int(errs.size*0.05)])
+    plt.title("Errors")
+    plt.xlabel("Iteration")
+    plt.tight_layout()             
+
+
 
 def doNMF(V, K, L, W = np.array([]), plotfn = None):
     N = V.shape[0]
@@ -68,36 +73,74 @@ def doNMF(V, K, L, W = np.array([]), plotfn = None):
     if W.size > 0:
         WFixed = True
         K = W.shape[1]
-        print("W.shape = ", W.shape)
     else:
         W = np.random.rand(N, K)
-    tic = time.time()
     H = np.random.rand(K, M)
-    print("Time elapsed H initializing: %.3g"%(time.time() - tic))
 
-    errs = [getKLError(V, W.dot(H))]
+    errs = np.zeros(L+1)
+    errs[0] = getKLError(V, W.dot(H))
     if plotfn:
         res=4
         plt.figure(figsize=(res*5, res))
-        plotfn(V, W, H, 0, errs) 
-        plt.savefig("NMF_%i.png"%0, bbox_inches = 'tight')
-    for l in range(L):
-        print("NMF iteration %i of %i"%(l+1, L))            
+    Ws = [np.array(W)]
+    Hs = [np.array(H)]
+    for l in range(L):  
+        if l%20 == 0:
+            print("Doing iteration {} of {}".format(l, L))    
         #KL Divergence Version
-        tic = time.time()
         VLam = V/(W.dot(H))
-        print("VLam Elapsed Time: %.3g"%(time.time() - tic))
-        tic = time.time()
         H *= (W.T).dot(VLam)/np.sum(W, 0)[:, None]
-        print("Elapsed Time H Update %.3g"%(time.time() - tic))
         if not WFixed:
             VLam = V/(W.dot(H))
             W *= (VLam.dot(H.T))/np.sum(H, 1)[None, :]
-        errs.append(getKLError(V, W.dot(H)))
-        if plotfn and ((l+1)==L):# or (l+1)%10 == 0):
+        errs[l+1] = getKLError(V, W.dot(H))
+        if plotfn:
+            Ws.append(np.array(W))
+            Hs.append(np.array(H))
+    if plotfn:
+        for l, (W, H) in enumerate(zip(Ws, Hs)):
             plt.clf()
-            plotfn(V, W, H, l+1, errs)
-            plt.savefig("NMF_%i.png"%(l+1), bbox_inches = 'tight')
+            plotfn(V, W, H, l, errs)
+            plt.savefig("NMF_%i.png"%(l+1), bbox_inches = 'tight', transparent=False, facecolor='w')
+    return (W, H)
+
+
+def doNMFKL(V, K, L, W = np.array([]), plotfn = None):
+    N = V.shape[0]
+    M = V.shape[1]
+    WFixed = False
+    if W.size > 0:
+        WFixed = True
+        K = W.shape[1]
+    else:
+        W = np.random.rand(N, K)
+    H = np.random.rand(K, M)
+
+    errs = np.zeros(L+1)
+    errs[0] = getKLError(V, W.dot(H))
+    if plotfn:
+        res=4
+        plt.figure(figsize=(res*5, res))
+    Ws = [np.array(W)]
+    Hs = [np.array(H)]
+    for l in range(L):  
+        if l%20 == 0:
+            print("Doing iteration {} of {}".format(l, L))    
+        #KL Divergence Version
+        VLam = V/(W.dot(H))
+        H *= (W.T).dot(VLam)/np.sum(W, 0)[:, None]
+        if not WFixed:
+            VLam = V/(W.dot(H))
+            W *= (VLam.dot(H.T))/np.sum(H, 1)[None, :]
+        errs[l+1] = getKLError(V, W.dot(H))
+        if plotfn:
+            Ws.append(np.array(W))
+            Hs.append(np.array(H))
+    if plotfn:
+        for l, (W, H) in enumerate(zip(Ws, Hs)):
+            plt.clf()
+            plotfn(V, W, H, l, errs)
+            plt.savefig("NMF_%i.png"%(l+1), bbox_inches = 'tight', transparent=False, facecolor='w')
     return (W, H)
 
 
